@@ -1,0 +1,41 @@
+{
+  "student_alex": {
+    "password_hash": "d9508122cd143d69df229bf3624b7bcb2b8ac81ed210a0c926455ef119c12abd",
+    "role": "Student",
+    "has_active_subscription": true,
+    "locked": false,
+    "notifications": [
+      "Your account was unlocked by an administrator."
+    ]
+  },
+  "student_sam": {
+    "password_hash": "e3e9fc033c2647b79bac54f75d0965c0715c6856e662fd02da8742100e5cda22",
+    "role": "Student",
+    "has_active_subscription": false,
+    "locked": false,
+    "notifications": []
+  },
+  "prof_jordan": {
+    "password_hash": "b7bacfdd6ae95ed150ec2a3296ae80252345c2c9079dd064060e0a13d0a93df4",
+    "role": "Instructor",
+    "has_active_subscription": true,
+    "locked": false,
+    "notifications": [
+      "Unauthorized attempt to open Admin Config was recorded."
+    ]
+  },
+  "prof_lee": {
+    "password_hash": "d1578b827105ac997993ca9c5a7039898007ea7b0e8cb9c48dba4ea39dcebad8",
+    "role": "Instructor",
+    "has_active_subscription": false,
+    "locked": false,
+    "notifications": []
+  },
+  "admin_casey": {
+    "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "role": "Admin",
+    "has_active_subscription": false,
+    "locked": false,
+    "notifications": []
+  }
+}
