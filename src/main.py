@@ -2,6 +2,9 @@
 
     python src/main.py                 -> canned demo (best for screenshots)
     python src/main.py --interactive   -> type a username and use menus
+                                          (saved to data/users.json)
+    python src/main.py --interactive --reset
+                                       -> same, but wipe saved data first
 
 This file is mostly "glue": it calls login from auth.py and access
 checks from permissions.py, then prints the results in a readable order.
@@ -9,6 +12,7 @@ checks from permissions.py, then prints the results in a readable order.
 
 from __future__ import print_function
 
+import os
 import sys
 
 from auth import (
@@ -16,9 +20,17 @@ from auth import (
     interactive_password_login,
     login_with_retries,
     show_notifications,
+    unlock_account,
 )
-from data import FEATURES, USERS
-from permissions import report_feature_access, welcome_user
+from data import (
+    DATA_FILE,
+    FEATURES,
+    USERS,
+    enable_persistence,
+    reset_data,
+    use_seed_data,
+)
+from permissions import evaluate_access, report_feature_access, welcome_user
 
 SEPARATOR = "-" * 60
 
@@ -77,6 +89,9 @@ def run_session(username, passwords):
 
 def run_demo():
     """Seven scripted logins that cover the main success and failure paths."""
+    # Always start from the factory data and never touch data/users.json,
+    # so every demo run (and every screenshot) looks the same.
+    use_seed_data()
     print("=== Learning Platform Access System ===")
 
     # 1. Subscribed student: quizzes + grades granted, analytics denied.
@@ -122,21 +137,61 @@ def interactive_feature_menu(username):
     report_feature_access(username, feature_key)
 
 
+def admin_unlock_menu():
+    """Admin only: pick a locked account and unlock it."""
+    locked = [name for name, record in USERS.items() if record.get("locked")]
+    if not locked:
+        print("No accounts are locked.")
+        return
+
+    print("")
+    print("Locked accounts:")
+    for index, name in enumerate(locked, start=1):
+        print("  {0}) {1}".format(index, name))
+    print("  {0}) Back".format(len(locked) + 1))
+
+    valid = [str(i) for i in range(1, len(locked) + 2)]
+    choice = prompt_choice("Account number: ", valid)
+    if choice is None or choice == str(len(locked) + 1):
+        return
+
+    target = locked[int(choice) - 1]
+    unlock_account(target)
+    print("Unlocked {0}.".format(target))
+
+
+def is_admin(username):
+    """Reuse the real access rule: admins are the ones who may open admin_config."""
+    user = USERS.get(username) or {}
+    granted, _ = evaluate_access(
+        True, user.get("role"), bool(user.get("has_active_subscription")),
+        "admin_config",
+    )
+    return granted
+
+
 def interactive_main_menu(username):
     """Loop until logout (or too many invalid menu choices)."""
+    admin = is_admin(username)
     while True:
         print("")
         print("Main menu:")
         print("  1) Access a feature")
         print("  2) View notifications")
         print("  3) Logout")
-        choice = prompt_choice("Select 1-3: ", ["1", "2", "3"])
+        valid = ["1", "2", "3"]
+        if admin:
+            print("  4) Unlock a locked account (admin)")
+            valid.append("4")
+        choice = prompt_choice("Select 1-{0}: ".format(len(valid)), valid)
         if choice is None:
             return
         if choice == "1":
             interactive_feature_menu(username)
         elif choice == "2":
             show_notifications(username)
+        elif choice == "4":
+            admin_unlock_menu()
         else:
             print("Logged out.")
             return
@@ -144,7 +199,15 @@ def interactive_main_menu(username):
 
 def run_interactive():
     """Type a real username/password instead of using the canned demo list."""
+    status = enable_persistence()
     print("=== Learning Platform Access System ===")
+    if status == "created":
+        print("Created a new save file: {0}".format(os.path.normpath(DATA_FILE)))
+    elif status == "recovered":
+        print("The save file was unreadable. It was backed up as users.json.corrupt")
+        print("and fresh data was created.")
+    else:
+        print("Loaded saved data from {0}".format(os.path.normpath(DATA_FILE)))
     print("Type 'quit' at the username prompt to exit.")
 
     while True:
@@ -171,7 +234,12 @@ def run_interactive():
 def main(argv):
     """Choose demo or interactive, and never show a raw traceback."""
     try:
-        if len(argv) > 1 and argv[1] == "--interactive":
+        flags = argv[1:]
+        if "--reset" in flags:
+            enable_persistence()
+            reset_data()
+            print("Saved data was reset to the starting accounts.")
+        if "--interactive" in flags:
             run_interactive()
         else:
             run_demo()
