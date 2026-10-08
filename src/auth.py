@@ -5,7 +5,7 @@ who they claim to be. It does not decide which classroom they can enter;
 that happens in permissions.py after a successful login.
 """
 
-from data import MAX_LOGIN_ATTEMPTS, USERS, hash_password
+from data import MAX_LOGIN_ATTEMPTS, USERS, hash_password, save_users
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +53,7 @@ def notify(username, message):
         user["notifications"] = [message]
     else:
         notes.append(message)
+    save_users()
     return True
 
 
@@ -71,6 +72,23 @@ def show_notifications(username):
         for item in notes:
             print("  - {0}".format(item))
         user["notifications"] = []
+        save_users()
+
+
+def unlock_account(username):
+    """Clear a lockout (an admin action) and tell the user about it.
+
+    Needed once data is saved to disk: a locked account now stays locked
+    after a restart, so there has to be a way to undo it.
+    Returns False if the username does not exist.
+    """
+    user = USERS.get(username)
+    if user is None:
+        return False
+    user["locked"] = False
+    save_users()
+    notify(username, "Your account was unlocked by an administrator.")
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +180,7 @@ def login_with_retries(username, password_attempts, max_attempts=MAX_LOGIN_ATTEM
         # One or two wrong guesses should not lock the account.
         if attempts_used >= max_attempts:
             user["locked"] = True
+            save_users()
             notify(
                 username,
                 "Your account was locked after too many failed login attempts.",
@@ -203,6 +222,7 @@ def interactive_password_login(username, read_line, max_attempts=MAX_LOGIN_ATTEM
             )
 
         user["locked"] = True
+        save_users()
         notify(
             username,
             "Your account was locked after too many failed login attempts.",
