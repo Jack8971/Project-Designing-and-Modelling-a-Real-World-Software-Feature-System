@@ -81,6 +81,7 @@ The access control engine evaluates three main conditions:
 
 2. Run the main simulation script:
    python src/main.py
+   python src/main.py --interactive
 
 ### Sample Simulation Output
 === Learning Platform Access System ===
